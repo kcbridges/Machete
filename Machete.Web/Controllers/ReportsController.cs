@@ -147,10 +147,10 @@ namespace Machete.Web.Controllers
                          select new
                          {
                             date = System.String.Format("{0:MM/dd/yyyy}", d.date),
-                            dwcList = d.dwcList,
-                            dwcPropio = d.dwcPropio,
-                            hhhList = d.hhhList,
-                            hhhPropio = d.hhhPropio,
+                            dwcList = d.dwcount,
+                            dwcPropio = d.dwcountr,
+                            hhhList = d.hhcount,
+                            hhhPropio = d.hhcountr,
                             uniqueSignins = d.uniqueSignins,
                             totalSignins = d.totalSignins,
                             totalAssignments = d.totalAssignments,

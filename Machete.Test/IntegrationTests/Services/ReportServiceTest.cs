@@ -116,7 +116,7 @@ namespace Machete.Test.IntegrationTests.Services
             var after = frb.ToServReports().CountTypeofDispatch(beginDate, endDate).ToList();
 
             //Assert
-            Assert.AreEqual(before.Select(q => q.dwcList).FirstOrDefault(), after.Select(q => q.dwcList).FirstOrDefault());
+            Assert.AreEqual(before.Select(q => q.dwcount).FirstOrDefault(), after.Select(q => q.dwcount).FirstOrDefault());
         }
 
         [TestMethod, TestCategory(TC.IT), TestCategory(TC.Service), TestCategory(TC.Reports)]
@@ -175,7 +175,7 @@ namespace Machete.Test.IntegrationTests.Services
             frb.AddWorkOrder(beginDate, endDate, endDate, 3, WorkOrder.iActive);
 
             //Act
-            var result = frb.ToServReports().ListOrdersByZipCode(beginDate, endDate).ToList();
+            var result = frb.ToServReports().ListOrdersByZip(beginDate, endDate).ToList();
 
             //Assert
             Assert.IsTrue(result.Select(q => q.zips).Contains("12345"));
