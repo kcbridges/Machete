@@ -865,11 +865,13 @@ namespace Machete.Service
             IEnumerable<ReportUnit> dailyCancelled;
             IEnumerable<DailySumData> q;
 
-            var dateRange = GetDateRange(date, date);
             dclCurrent = CountTypeofDispatch().ToList();
             dailySignins = CountSignins().ToList();
+
+            var dateRange = GetDateRange(dclCurrent.Min(x => x.date), dclCurrent.Max(x => x.date));
+
             dailyUnique = CountUniqueSignins(dateRange).ToList();
-            dailyAssignments = CountAssignments(dateRange).ToList();
+            dailyAssignments = CountAssignments().ToList();
             dailyCancelled = CountCancelled().ToList();
 
             q = dclCurrent
