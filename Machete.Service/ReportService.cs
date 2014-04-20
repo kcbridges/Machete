@@ -520,7 +520,7 @@ namespace Machete.Service
 
         /// <summary>
         /// Returns dates of completion, minutes completed, and the dwccardnum for
-        /// all adults attending >x minutes of a particular class for a given time range.
+        /// all adults attending >x minutes of an array of activityName IDs for a given time range.
         /// </summary>
         /// <param name="actNameId">The Lookups ID of the activityName to filter by.</param>
         /// <param name="minutesInClass">The amount of time, in minutes, those to be counted must have attended classes of the given activityName type.</param>
@@ -528,8 +528,9 @@ namespace Machete.Service
         public IQueryable<ReportUnit> GetActivityRockstars(IEnumerable<DateTime> range, int[] actNameId, int minutesInClass)
         {
             var asQ = asRepo.GetAllQ();
-            string[] naQ = lookRepo.GetManyQ(z => actNameId.Contains(z.ID)).Select(na => na.text_EN).ToArray();
+            string[] naQ = lookRepo.GetManyQ(z => actNameId.Contains(z.ID)).Select(na => na.text_EN + ", ").ToArray();
             string sb = new StringBuilder().Append(naQ).ToString(); // should show all actNames being queried
+            sb.TrimEnd(sb[sb.Length - 2]);
 
             return range
             .GroupJoin(asQ
