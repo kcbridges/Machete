@@ -1,0 +1,11 @@
+﻿BEGIN UPDATE dbo.Lookups SET [key] = 'Single'
+WHERE text_EN = 'Single' AND category = 'maritalstatus'
+BEGIN UPDATE dbo.Lookups SET [key] = 'Married'
+WHERE text_EN = 'Single' AND category = 'maritalstatus'
+BEGIN UPDATE dbo.Lookups SET [key] = 'Separated'
+WHERE text_EN = 'Separated' AND category = 'maritalstatus'
+BEGIN UPDATE dbo.Lookups SET [key] = 'Widowed'
+WHERE text_EN = 'Widow/Widower' AND category = 'maritalstatus'
+BEGIN UPDATE dbo.Lookups SET [key] = 'Divorced'
+WHERE text_EN = 'Divorced' AND category = 'maritalstatus'
+--TODO include in next db refactor as Sql() statement

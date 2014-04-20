@@ -498,7 +498,50 @@ namespace Machete.Service
                 .AsQueryable();
         }
 
-        // TODO: make ActivityRockstars override that allows for searching multiple classes.
+        /// <summary>
+        /// Returns dates of completion, minutes completed, and the dwccardnum for
+        /// all adults attending >x minutes of a particular class for a given time range.
+        /// </summary>
+        /// <param name="actNameId">The Lookups ID of the activityName to filter by.</param>
+        /// <param name="minutesInClass">The amount of time, in minutes, those to be counted must have attended classes of the given activityName type.</param>
+        /// <returns>date, dwccardnum, minutesInClass</returns>
+        public IQueryable<ReportUnit> GetActivityRockstars(IEnumerable<DateTime> range, int[] actNameId, int minutesInClass)
+        {
+            var asQ = asRepo.GetAllQ();
+            string[] naQ = lookRepo.GetManyQ(z => actNameId.Contains(z.ID)).Select(na => na.text_EN).ToArray();
+            string sb = new StringBuilder().Append(naQ).ToString(); // should show all actNames being queried
+
+            return range
+            .GroupJoin(asQ
+                .Where(w => actNameId.Contains(w.Activity.name))
+                .GroupBy(gb => gb.dwccardnum)
+                .Select(asi => new
+                {
+                    dwc = asi.Key,
+                    date = DbFunctions.TruncateTime(asi.Select(sel => sel.dateforsignin).Max()),
+                    // Get total minutes of class person has
+                    // attended for this activityName:
+                    mins = asi
+                        .Sum(x =>
+                            ((DbFunctions.DiffHours
+                                (x.Activity.dateEnd,
+                                x.Activity.dateStart)
+                                * 60)
+                            + DbFunctions.DiffMinutes
+                                (x.Activity.dateEnd,
+                                x.Activity.dateStart)))
+                })
+                .Where(w => w.mins >= minutesInClass),
+                x => x,
+                minQ => minQ.date,
+                (x, minQ) => new ReportUnit
+                {
+                    date = x,
+                    count = minQ.Count(),
+                    info = sb
+                })
+                .AsQueryable();
+        }
 
         /// <summary>
         /// Returns a count of new, expired, and still active members by enumerated dates within the given period.
@@ -510,72 +553,47 @@ namespace Machete.Service
         /// <param name="unitOfMeasure">The unit of time to measure; "days" or "months".</param>
         /// <param name="interval">The interval of time (7 days, 3 months) as int</param>
         /// <returns>date, enrolledOnDate, expiredOnDate, count</returns>
-        public IQueryable<StatusUnit> MemberStatusByDate(DateTime beginDate, DateTime endDate, string unitOfMeasure, int interval)
+        public IQueryable<StatusUnit> MemberStatusByDate(IEnumerable<DateTime> range)
         {
-            // TODO: Add years as an option for the year-to-year comparison.
-            IQueryable<StatusUnit> query;
-
             var wQ = wRepo.GetAllQ();
 
-            if (unitOfMeasure == "months" && interval > 0)
-            {
-                int months = ((endDate.Year - beginDate.Year) * 12) + endDate.Month - beginDate.Month;
-                query = Enumerable
-                  .Range(0, months / interval)
-                  .Select(w => endDate.AddMonths(w * -interval))
-                  .Select(x => new StatusUnit
-                      {
-                          date = x,
-                          count = wQ.Where(y => y.dateOfMembership < x && y.memberexpirationdate > x).Count(),
-                          enrolledOnDate = wQ.Where(y => y.dateOfMembership >= DbFunctions.AddMonths(x, -interval) && y.dateOfMembership <= x).Count(),
-                          expiredOnDate = wQ.Where(y => y.memberexpirationdate >= DbFunctions.AddMonths(x, -interval) && y.memberexpirationdate <= x).Count()
-                      })
-                  .AsQueryable();
-                return query;
-            }
-            else if (unitOfMeasure == "days" && interval > 0)
-            {
-                query = Enumerable
-                    .Range(0, 1 + (endDate.Subtract(beginDate).Days / interval))
-                    .Select(w => endDate.AddDays(w * -interval))
-                    .Select(x => new StatusUnit
-                        {
-                            date = x,
-                            count = wQ.Where(y => y.dateOfMembership < x && y.memberexpirationdate > x).Count(),
-                            enrolledOnDate = wQ.Where(y => y.dateOfMembership == x).Count(),
-                            expiredOnDate = wQ.Where(y => y.memberexpirationdate == x).Count()
-                        })
-                    .AsQueryable();
-
-                return query;
-            }
-            else throw new Exception("unitOfMeasure must be \"months\" or \"days\" and interval must be a positive integer > 0.");
+            return range.GroupJoin(wQ,
+                x => x,
+                y => y.dateOfMembership,
+                (x, y) => new
+                {
+                    date = x,
+                    count = wQ.Where(z => z.dateOfMembership < x && z.memberexpirationdate > x).Count(),
+                    enrolledOnDate = y.Count()
+                }
+                )
+            .GroupJoin(wQ,
+                x => x.date,
+                y => y.memberexpirationdate,
+                (x, y) => new StatusUnit
+                {
+                    date = x.date,
+                    count = x.count,
+                    enrolledOnDate = x.enrolledOnDate,
+                    expiredOnDate = y.Count()
+                })
+            .AsQueryable();
         }
 
         public IQueryable<MemberDateModel> SingleAdults()
         {
             IQueryable<MemberDateModel> query;
 
-            var lQ = lookRepo.GetAllQ();
             var wQ = wRepo.GetAllQ();
 
             query = wQ
-                .Join(lQ, worker => worker.maritalstatus, lookup => lookup.ID, (worker, lookup) => new
-                {
-                    card = worker.dwccardnum,
-                    zip = worker.Person.zipcode,
-                    memDate = worker.dateOfMembership,
-                    expDate = worker.memberexpirationdate,
-                    kids = worker.livewithchildren,
-                    mStatus = lookup.text_EN
-                })
-                .Where(worker => !worker.kids && worker.mStatus != "Married")
+                .Where(worker => !worker.livewithchildren && worker.maritalstatus != lCache.getByKeys(LCategory.maritalstatus, LMaritalStatus.Married))
                 .Select(x => new MemberDateModel
                 {
-                    dwcnum = x.card,
-                    zip = x.zip,
-                    memDate = x.memDate,
-                    expDate = x.expDate
+                    dwcnum = x.dwccardnum,
+                    zip = x.Person.zipcode,
+                    memDate = x.dateOfMembership,
+                    expDate = x.memberexpirationdate
                 });
 
             return query;
@@ -589,22 +607,13 @@ namespace Machete.Service
             var wQ = wRepo.GetAllQ();
 
             query = wQ
-                .Join(lQ, worker => worker.maritalstatus, lookup => lookup.ID, (worker, lookup) => new
-                {
-                    card = worker.dwccardnum,
-                    zip = worker.Person.zipcode,
-                    memDate = worker.dateOfMembership,
-                    expDate = worker.memberexpirationdate,
-                    kids = worker.livewithchildren,
-                    mStatus = lookup.text_EN
-                })
-                .Where(worker => worker.kids && worker.mStatus == "Married")
+                .Where(worker => worker.livewithchildren && worker.maritalstatus == lCache.getByKeys(LCategory.maritalstatus, LMaritalStatus.Married))
                 .Select(x => new MemberDateModel
                 {
-                    dwcnum = x.card,
-                    zip = x.zip,
-                    memDate = x.memDate,
-                    expDate = x.expDate
+                    dwcnum = x.dwccardnum,
+                    zip = x.Person.zipcode,
+                    memDate = x.dateOfMembership,
+                    expDate = x.memberexpirationdate
                 });
 
             return query;

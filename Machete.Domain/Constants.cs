@@ -43,7 +43,20 @@ namespace Machete.Domain
         public const string Expired= "Expired";
         public const string Inactive = "Inactive";
     }
-
+    public struct LWorkType
+    {
+        public const string DWC = "DWC";
+        public const string HHH = "HHH";
+        public const string EVT = "EVT";
+    }
+    public struct LMaritalStatus
+    {
+        public const string Single = "Single";
+        public const string Married = "Married";
+        public const string Separated = "Separated";
+        public const string Widowed = "Widowed";
+        public const string Divorced = "Divorced";
+    }
     public struct LOrderStatus
     {
         public const string Active= "Active";
@@ -64,12 +77,6 @@ namespace Machete.Domain
     public struct LKey
     {
         public const string Default = "default";
-    }
-    public struct LWorkType
-    {
-        public const string DWC = "DWC";
-        public const string HHH = "HHH";
-        public const string EVT = "EVT";
     }
     public struct LActType
     {
