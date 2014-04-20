@@ -89,6 +89,26 @@ namespace Machete.Service
             .OrderBy(o => o.date);
         }
 
+        public IQueryable<ReportUnit> CountUniqueSignins()
+        {
+            var wsiQ = wsiRepo.GetAllQ();
+
+            return wsiQ
+                .GroupBy(g => g.dwccardnum)
+                .Select(h => new
+                {
+                    info = h.Key.ToString(),
+                    date = h.Min(x => x.dateforsignin)
+                })
+                .GroupBy(g => g.date)
+                .Select(y => new ReportUnit
+                {
+                    date = y.Key,
+                    count = y.Count()
+                })
+                .AsQueryable();
+
+        }
         /// <summary>
         /// A simple count of unduplicated worker signins for the given period.
         /// Note: Casa's policy is that these should reset on beginDate, but that
