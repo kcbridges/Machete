@@ -224,7 +224,7 @@ namespace Machete.Service
         /// </summary>
         /// <param name="dateRequested">A single DateTime parameter</param>
         /// <returns>IQueryable</returns>
-        public IQueryable<TypeOfDispatchModel> CountTypeofDispatch(DateTime beginDate, DateTime endDate)
+        public IQueryable<TypeOfDispatchModel> CountTypeofDispatch()
         {
             var waQ = waRepo.GetAllQ();
             var dwcId = lCache.getByKeys("worktype", "DWC"); 
@@ -866,11 +866,11 @@ namespace Machete.Service
             IEnumerable<DailySumData> q;
 
             var dateRange = GetDateRange(date, date);
-            dclCurrent = CountTypeofDispatch(dateRange).ToList();
-            dailySignins = CountSignins(dateRange).ToList();
+            dclCurrent = CountTypeofDispatch().ToList();
+            dailySignins = CountSignins().ToList();
             dailyUnique = CountUniqueSignins(dateRange).ToList();
             dailyAssignments = CountAssignments(dateRange).ToList();
-            dailyCancelled = CountCancelled(dateRange).ToList();
+            dailyCancelled = CountCancelled().ToList();
 
             q = dclCurrent
                 .Select(group => new DailySumData
