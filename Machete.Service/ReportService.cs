@@ -23,7 +23,7 @@ namespace Machete.Service
     #region public class ReportService (Interface and Constructor)
     public interface IReportService
     {
-        IEnumerable<DailySumData> DailySumController(DateTime date);
+        DailySumData DailySumController(DateTime date);
         IEnumerable<WeeklySumData> WeeklySumController(DateTime beginDate, DateTime endDate);
         IEnumerable<MonthlySumData> MonthlySumController(DateTime beginDate, DateTime endDate);
         IEnumerable<YearSumData> YearlySumController(DateTime beginDate, DateTime endDate);
@@ -876,39 +876,33 @@ namespace Machete.Service
         /// <param name="beginDate"></param>
         /// <param name="endDate"></param>
         /// <returns></returns>
-        public IEnumerable<DailySumData> DailySumController(DateTime date)
+        public DailySumData DailySumController(DateTime date)
         {
-            IEnumerable<TypeOfDispatchModel> dclCurrent;
+            TypeOfDispatchModel dclCurrent;
             IEnumerable<ReportUnit> dailySignins;
             IEnumerable<ReportUnit> dailyUnique;
             IEnumerable<ReportUnit> dailyAssignments;
             IEnumerable<ReportUnit> dailyCancelled;
-            IEnumerable<DailySumData> q;
+            DailySumData q;
 
-            dclCurrent = CountTypeofDispatch().ToList();
+            dclCurrent = CountTypeofDispatch().ToList().Where(x => x.date == date).FirstOrDefault();
             dailySignins = CountSignins().ToList();
-
-            var dateRange = GetDateRange(dclCurrent.Min(x => x.date), dclCurrent.Max(x => x.date));
-
-            dailyUnique = CountUniqueSignins(dateRange).ToList();
+            dailyUnique = CountUniqueSignins().ToList();
             dailyAssignments = CountAssignments().ToList();
             dailyCancelled = CountCancelled().ToList();
 
-            q = dclCurrent
-                .Select(group => new DailySumData
+            q = new DailySumData
                 {
-                    date = group.date,
-                    dwcount = group.dwcount,
-                    dwcountr = group.dwcountr,
-                    hhcount = group.hhcount,
-                    hhcountr = group.hhcountr,
-                    uniqueSignins = dailyUnique.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0,
-                    totalSignins = dailySignins.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0,
-                    totalAssignments = dailyAssignments.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0, // should be same as group.count...mayhap could avoid this join
-                    cancelledJobs = dailyCancelled.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0
-                });
-
-            q = q.OrderBy(p => p.date);
+                    date = date,
+                    dwcount = dclCurrent.dwcount,
+                    dwcountr = dclCurrent.dwcountr,
+                    hhcount = dclCurrent.hhcount,
+                    hhcountr = dclCurrent.hhcountr,
+                    uniqueSignins = (int)dailyUnique.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault(),
+                    totalSignins = (int)dailySignins.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault(),
+                    totalAssignments = (int)dailyAssignments.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault(),
+                    cancelledJobs = (int)dailyCancelled.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault()
+                };
 
             return q;
         }
