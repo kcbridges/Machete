@@ -25,7 +25,7 @@ namespace Machete.Web.ViewModel
 
     public class MonthlyReportPrintView : ReportPrintView
     {
-        public dataTableResult<MonthlySumData> report { get; set; }
+        public dataTableResult<DispatchData> report { get; set; }
     }
 
     public class JzcReportPrintView : ReportPrintView

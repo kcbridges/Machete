@@ -23,14 +23,14 @@ namespace Machete.Service
     #region public class ReportService (Interface and Constructor)
     public interface IReportService
     {
-        IEnumerable<DailySumData> DailySumController(DateTime date);
+        DailySumData DailySumController(DateTime date);
         IEnumerable<WeeklySumData> WeeklySumController(DateTime beginDate, DateTime endDate);
-        IEnumerable<MonthlySumData> MonthlySumController(DateTime beginDate, DateTime endDate);
+        IEnumerable<DispatchData> MonthlySumController(DateTime beginDate, DateTime endDate);
         IEnumerable<YearSumData> YearlySumController(DateTime beginDate, DateTime endDate);
         IEnumerable<ActivityData> ActivityReportController(DateTime beginDate, DateTime endDate, string reportType);
         IEnumerable<ActivityData> YearlyActController(DateTime beginDate, DateTime endDate);
         IEnumerable<ZipModel> EmployerReportController(DateTime beginDate, DateTime endDate);
-        IEnumerable<NewWorkerData> NewWorkerController(DateTime beginDate, DateTime endDate, string reportType);
+        IEnumerable<WorkerData> NewWorkerController(DateTime beginDate, DateTime endDate, string reportType);
     }
 
     public class ReportService : IReportService
@@ -895,37 +895,33 @@ namespace Machete.Service
         /// <param name="beginDate"></param>
         /// <param name="endDate"></param>
         /// <returns></returns>
-        public IEnumerable<DailySumData> DailySumController(DateTime date)
+        public DailySumData DailySumController(DateTime date)
         {
-            IEnumerable<TypeOfDispatchModel> dclCurrent;
+            TypeOfDispatchModel dclCurrent;
             IEnumerable<ReportUnit> dailySignins;
             IEnumerable<ReportUnit> dailyUnique;
             IEnumerable<ReportUnit> dailyAssignments;
             IEnumerable<ReportUnit> dailyCancelled;
-            IEnumerable<DailySumData> q;
+            DailySumData q;
 
-            var dateRange = GetDateRange(date, date);
-            dclCurrent = CountTypeofDispatch().ToList();
+            dclCurrent = CountTypeofDispatch().ToList().Where(x => x.date == date).FirstOrDefault();
             dailySignins = CountSignins().ToList();
-            dailyUnique = CountUniqueSignins(dateRange).ToList();
-            dailyAssignments = CountAssignments(dateRange).ToList();
+            dailyUnique = CountUniqueSignins().ToList();
+            dailyAssignments = CountAssignments().ToList();
             dailyCancelled = CountCancelled().ToList();
 
-            q = dclCurrent
-                .Select(group => new DailySumData
+            q = new DailySumData
                 {
-                    date = group.date,
-                    dwcount = group.dwcount,
-                    dwcountr = group.dwcountr,
-                    hhcount = group.hhcount,
-                    hhcountr = group.hhcountr,
-                    uniqueSignins = dailyUnique.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0,
-                    totalSignins = dailySignins.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0,
-                    totalAssignments = dailyAssignments.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0, // should be same as group.count...mayhap could avoid this join
-                    cancelledJobs = dailyCancelled.Where(whr => whr.date == group.date).Select(g => g.count).FirstOrDefault() ?? 0
-                });
-
-            q = q.OrderBy(p => p.date);
+                    date = date,
+                    dwcount = dclCurrent.dwcount,
+                    dwcountr = dclCurrent.dwcountr,
+                    hhcount = dclCurrent.hhcount,
+                    hhcountr = dclCurrent.hhcountr,
+                    uniqueSignins = (int)dailyUnique.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault(),
+                    totalSignins = (int)dailySignins.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault(),
+                    totalAssignments = (int)dailyAssignments.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault(),
+                    cancelledJobs = (int)dailyCancelled.Where(whr => whr.date == date).Select(g => g.count).FirstOrDefault()
+                };
 
             return q;
         }
@@ -946,62 +942,75 @@ namespace Machete.Service
 
             var dateRange = GetDateRange(beginDate, endDate);
 
-            weeklyWages = HourlyWageAverage(beginDate, endDate).ToList();
-            weeklySignins = CountSignins(dateRange).ToList();
-            weeklyAssignments = CountAssignments(beginDate, endDate).ToList();
-            weeklyJobs = ListJobs(beginDate, endDate).ToList();
+            weeklyWages = HourlyWageAverage().ToList();
+            weeklySignins = CountSignins().ToList();
+            weeklyAssignments = CountAssignments().ToList();
+            weeklyJobs = ListJobs().ToList();
 
             q = weeklyWages
                 .Select(g => new WeeklySumData
                 {
                     dayofweek = g.date.DayOfWeek,
                     date = g.date,
-                    totalSignins = weeklySignins.Where(whr => whr.date == g.date).Select(h => h.count).FirstOrDefault() ?? 0,
-                    noWeekJobs = weeklyAssignments.Where(whr => whr.date == g.date).Select(h => h.count).FirstOrDefault() ?? 0,
+                    totalSignins = (int)weeklySignins.Where(whr => whr.date == g.date).Select(h => h.count).FirstOrDefault(),
+                    numWeekJobs = (int)weeklyAssignments.Where(whr => whr.date == g.date).Select(h => h.count).FirstOrDefault(),
                     weekEstDailyHours = g.hours,
                     weekEstPayment = g.wages,
                     weekHourlyWage = g.avg,
                     topJobs = weeklyJobs.Where(whr => whr.date == g.date)
                 });
 
-            q = q.OrderBy(p => p.date);
-
             return q;
         }
 
-        public IEnumerable<MonthlySumData> MonthlySumController(DateTime beginDate, DateTime endDate)
+        public IEnumerable<DispatchData> DispatchReportController(DateTime beginDate, DateTime endDate)
         {
             IEnumerable<ReportUnit> signins;
             IEnumerable<ReportUnit> unique;
-            IEnumerable<ActivityUnit> classes;
-            IEnumerable<PlacementUnit> workers;
+            IEnumerable<ReportUnit> classes;
+            IEnumerable<ReportUnit> notAssigned;
+            IEnumerable<ReportUnit> dispatched;
+            IEnumerable<ReportUnit> tempDisp;
+            IEnumerable<ReportUnit> permDisp;
+            IEnumerable<ReportUnit> undupDisp;
             IEnumerable<AverageWageModel> average;
-            IEnumerable<StatusUnit> status;
+            IEnumerable<ReportUnit> cancelled;
+            IEnumerable<ReportUnit> skills;
 
-            IEnumerable<MonthlySumData> q;
+            IEnumerable<DispatchData> q;
 
             var dateRange = GetDateRange(beginDate, endDate);
 
-            signins = CountSignins(dateRange).ToList();
-            unique = CountUniqueSignins(dateRange).ToList();
-            classes = GetActivitySignins(beginDate, endDate).ToList();
-            workers = WorkersInJobs(beginDate, endDate).ToList();
-            average = HourlyWageAverage(beginDate, endDate).ToList();
+            signins = CountSignins().ToList();
+            unique = CountUniqueSignins().ToList();
+            classes = GetActivitySignins().ToList();
+            notAssigned = CountNotAssigned(LOrderStatus.Completed).ToList();
+            dispatched = CountAssignments().ToList();
+            tempDisp = CountAssignments(false).ToList();
+            permDisp = CountAssignments(true).ToList();
+            undupDisp = CountAssignments(dateRange).ToList();
+            average = HourlyWageAverage().ToList();
+            cancelled = CountNotAssigned(LOrderStatus.Cancelled).ToList();
+            skills = ListJobs().ToList();
 
             q = dateRange
-                .Select(g => new MonthlySumData
+                .Select(g => new DispatchData
                 {
                     dateStart = g,
                     dateEnd = g.AddDays(1),
-                    totalSignins = signins.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.count).FirstOrDefault() ?? 0,
-                    uniqueSignins = unique.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.count).FirstOrDefault() ?? 0, //dd
-                    dispatched = workers.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.count).FirstOrDefault() ?? 0,
-                    tempDispatched = workers.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.tempCount).FirstOrDefault() ?? 0, //dd
-                    permanentPlacements = workers.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.permCount).FirstOrDefault() ?? 0, //dd
-                    undupDispatched = workers.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.undupCount).FirstOrDefault() ?? 0, //dd
-                    totalHours = average.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.hours).FirstOrDefault(),
-                    totalIncome = average.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.wages).FirstOrDefault(),
-                    avgIncomePerHour = average.Where(w => w.date >= g && w.date < g.AddDays(1)).Select(h => h.avg).FirstOrDefault(),
+                    totalSignins = (int)signins.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
+                    uniqueSignins = (int)unique.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
+                    dispatched = (int)dispatched.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
+                    tempDispatched = (int)tempDisp.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
+                    permanentPlacements = (int)permDisp.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
+                    undupDispatched = (int)undupDisp.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
+                    totalHours = average.Where(w => w.date == g).Select(h => h.hours).FirstOrDefault(),
+                    totalIncome = average.Where(w => w.date == g).Select(h => h.wages).FirstOrDefault(),
+                    avgIncomePerHour = average.Where(w => w.date == g).Select(h => h.avg).FirstOrDefault(),
+                    countNotAssigned = (int)notAssigned.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
+                    cancelledAssignments = (int)cancelled.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
+                    skills = skills.Where(w => w.date == g)
+                    
                 });
 
             return q;
@@ -1009,38 +1018,24 @@ namespace Machete.Service
 
         public IEnumerable<ActivityData> ActivityReportController(DateTime beginDate, DateTime endDate)
         {
-            IEnumerable<ReportUnit> eslAssessed;
-            IEnumerable<ActivityUnit> getAllClassAttendance;
+            IEnumerable<ReportUnit> name;
+            IEnumerable<ReportUnit> attendance;
+            IEnumerable<ReportUnit> morethanxhours;
             IEnumerable<ActivityData> q;
             IEnumerable<DateTime> getDates;
 
-            getDates = Enumerable.Range(0, 1 + endDate.Subtract(beginDate).Days)
-                .Select(offset => beginDate.AddDays(offset))
-                .ToArray();
+            var dateRange = GetDateRange(beginDate, endDate);
 
-            getAllClassAttendance = GetActivitySignins(beginDate, endDate).ToList();
-            eslAssessed = GetActivityRockstars().ToList();
-            var safetyTrainees = getAllClassAttendance
-                        .Where(whr => whr.activityType == "Health & Safety");
-            var skillsTrainees = getAllClassAttendance
-                        .Where(whr => whr.activityType == "Skills Training" || whr.activityType == "Leadership Development");
-            var basGardenTrainees = getAllClassAttendance.Where(basic => basic.info == "Basic Gardening");
-            var advGardenTrainees = getAllClassAttendance.Where(adv => adv.info == "Advanced Gardening");
-            var finTrainees = getAllClassAttendance.Where(fin => fin.info == "Financial Education");
-            var oshaTrainees = getAllClassAttendance.Where(osha => osha.info.Contains("OSHA"));
+            name = GetActivitySignins().ToList();
+            attendance = GetActivitySignins().ToList();
 
             q = getDates
                 .Select(g => new ActivityData
                 {
-                    dateStart = g,
-                    safety = safetyTrainees.Where(whr => whr.date == g).Count(),
-                    skills = skillsTrainees.Where(whr => whr.date == g).Count(),
-                    esl = eslAssessed.Where(whr => whr.date == g).Count(),
-                    basGarden = basGardenTrainees.Where(whr => whr.date == g).Count(),
-                    advGarden = advGardenTrainees.Where(whr => whr.date == g).Count(),
-                    finEd = finTrainees.Where(whr => whr.date == g).Count(),
-                    osha = oshaTrainees.Where(whr => whr.date == g).Count(),
-                    drilldown = getAllClassAttendance.Where(whr => whr.date == g)
+                    ActivityName = name.Where(w => w.date == g).ToString(),
+                    Attendance = (int)attendance.Where(w => w.date == g).Select(FirstOrDefault(),
+                    MoreThanXHours = (int)morethanxhours.Where(w => w.date == g).FirstOrDefault(),
+                    
                 });
 
             return q;
@@ -1053,12 +1048,13 @@ namespace Machete.Service
         /// <param name="beginDate"></param>
         /// <param name="endDate"></param>
         /// <returns>date, singleAdults, familyHouseholds, newSingleAdults, newFamilyHouseholds, zipCodeCompleteness</returns>
-        public IEnumerable<NewWorkerData> NewWorkerController(DateTime beginDate, DateTime endDate, string reportType)
+        public IEnumerable<WorkerData> NewWorkerController(DateTime beginDate, DateTime endDate, string reportType)
         {
-            IEnumerable<NewWorkerData> q;
+            IEnumerable<WorkerData> q;
             IEnumerable<MemberDateModel> singleAdults;
             IEnumerable<MemberDateModel> familyHouseholds;
             IEnumerable<DateTime> getDates;
+            IEnumerable<StatusUnit> status;
 
             singleAdults = SingleAdults().ToList();
             familyHouseholds = FamilyHouseholds().ToList();
@@ -1070,7 +1066,7 @@ namespace Machete.Service
                    .ToArray();
 
                 q = getDates
-                    .Select(x => new NewWorkerData
+                    .Select(x => new WorkerData
                     {
                         dateStart = x,
                         dateEnd = x.AddDays(1),
@@ -1089,7 +1085,7 @@ namespace Machete.Service
                     .ToArray();
 
                 q = getDates
-                    .Select(x => new NewWorkerData
+                    .Select(x => new WorkerData
                     {
                         dateStart = x.AddDays(1),
                         dateEnd = x.AddMonths(3).AddDays(1),
@@ -1214,7 +1210,7 @@ namespace Machete.Service
         public DayOfWeek dayofweek { get; set; }
         public DateTime date { get; set; }
         public int totalSignins { get; set; }
-        public int noWeekJobs { get; set; }
+        public int numWeekJobs { get; set; }
         public int weekEstDailyHours { get; set; }
         public double weekEstPayment { get; set; }
         public double weekHourlyWage { get; set; }
@@ -1226,7 +1222,7 @@ namespace Machete.Service
     /// DateTime date, int totalDWCSignins, int totalHHHSignins
     /// dispatchedDWCSignins, int dispatchedHHHSignins
     /// </summary>
-    public class MonthlySumData
+    public class DispatchData
     {
         public DateTime dateStart { get; set; }
         public DateTime dateEnd { get; set; }
@@ -1236,30 +1232,12 @@ namespace Machete.Service
         public int tempDispatched { get; set; }
         public int permanentPlacements { get; set; }
         public int undupDispatched { get; set; }
+        public int cancelledAssignments { get; set; }
+        public int countNotAssigned { get; set; }
         public int totalHours { get; set; }
         public double totalIncome { get; set; }
         public double avgIncomePerHour { get; set; }
-        public int newlyEnrolled { get; set; }
-        public int peopleWhoLeft { get; set; }
-    }
-
-    public class YearSumData
-    {
-        public DateTime dateStart { get; set; }
-        public DateTime dateEnd { get; set; }
-        public int totalSignins { get; set; }
-        public int uniqueSignins { get; set; }
-        public int dispatched { get; set; }
-        public int tempDispatched { get; set; }
-        public int permanentPlacements { get; set; }
-        public int undupDispatched { get; set; }
-        public int totalHours { get; set; }
-        public double totalIncome { get; set; }
-        public double avgIncomePerHour { get; set; }
-        public int stillHere { get; set; }
-        public int newlyEnrolled { get; set; }
-        public int peopleWhoLeft { get; set; }
-        public int peopleWhoWentToClass { get; set; }
+        public IEnumerable<ReportUnit> skills { get; set; }
     }
 
     public class ZipModel
@@ -1270,29 +1248,27 @@ namespace Machete.Service
         public IEnumerable<ReportUnit> skills { get; set; }
     }
 
-    public class NewWorkerData
+    public class WorkerData
     {
         public DateTime? dateStart { get; set; }
         public DateTime? dateEnd { get; set; }
+        public int active { get; set; }
+        public int newlyEnrolled { get; set; }
+        public int peopleWhoLeft { get; set; }
         public int singleAdults { get; set; }
         public int familyHouseholds { get; set; }
         public int newSingleAdults { get; set; }
         public int newFamilyHouseholds { get; set; }
         public int zipCompleteness { get; set; }
+        
     }
     
     public class ActivityData
     {
-        public DateTime? dateStart { get; set; }
-        public DateTime? dateEnd { get; set; }
-        public int safety { get; set; }
-        public int skills { get; set; }
-        public int esl { get; set; }
-        public int basGarden { get; set; }
-        public int advGarden { get; set; }
-        public int finEd { get; set; }
-        public int osha { get; set; }
-        public IEnumerable<ActivityUnit> drilldown { get; set; }
+        public string ActivityName { get; set; }
+        public int Attendance { get; set; }
+        public int MoreThanXHours { get; set; }
+        
     }
 
     #endregion

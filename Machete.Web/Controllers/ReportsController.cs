@@ -195,7 +195,7 @@ namespace Machete.Web.Controllers
                              weekday = d.dayofweek.ToString(),
                              date = System.String.Format("{0:MM/dd/yyyy}", d.date),
                              totalSignins = d.totalSignins,
-                             totalAssignments = d.noWeekJobs,
+                             totalAssignments = d.numWeekJobs,
                              weekEstDailyHours = d.weekEstDailyHours,
                              weekEstPayment = System.String.Format("{0:C}", d.weekEstPayment),
                              weekHourlyWage = System.String.Format("{0:C}", d.weekHourlyWage),
@@ -229,7 +229,7 @@ namespace Machete.Web.Controllers
             DateTime monthDate;
             DateTime beginDate;
             DateTime endDate;
-            dataTableResult<MonthlySumData> mwd;
+            dataTableResult<DispatchData> mwd;
 
             monthDate = voDate(param);
             beginDate = new DateTime(monthDate.Year, monthDate.Month, 1, 0, 0, 0);
@@ -481,7 +481,7 @@ namespace Machete.Web.Controllers
             beginDate = wDate.AddDays(-6).Date;
             endDate = new DateTime(wDate.Year, wDate.Month, wDate.Day, 23, 59, 59);
 
-            dataTableResult<NewWorkerData> newWkr = NewWorkerView(beginDate, endDate, "weekly");
+            dataTableResult<WorkerData> newWkr = NewWorkerView(beginDate, endDate, "weekly");
 
             var result = from d in newWkr.query
                          orderby d.dateStart ascending
@@ -515,7 +515,7 @@ namespace Machete.Web.Controllers
             beginDate = new DateTime(mDate.Year, mDate.Month, 1, 0, 0, 0);
             endDate = new DateTime(mDate.Year, mDate.Month, System.DateTime.DaysInMonth(mDate.Year, mDate.Month));
 
-            dataTableResult<NewWorkerData> newWkr = NewWorkerView(beginDate, endDate, "monthly");
+            dataTableResult<WorkerData> newWkr = NewWorkerView(beginDate, endDate, "monthly");
 
             var result = from d in newWkr.query
                          select new
@@ -548,7 +548,7 @@ namespace Machete.Web.Controllers
             beginDate = yDate.AddMonths(-12).Date;
             endDate = new DateTime(yDate.Year, yDate.Month, yDate.Day, 23, 59, 59);
 
-            dataTableResult<NewWorkerData> newWkr = NewWorkerView(beginDate, endDate, "yearly");
+            dataTableResult<WorkerData> newWkr = NewWorkerView(beginDate, endDate, "yearly");
 
             var result = from d in newWkr.query
                          select new
@@ -712,11 +712,11 @@ namespace Machete.Web.Controllers
             return result;
         }
 
-        private dataTableResult<MonthlySumData> monthSumView(DateTime beginDate, DateTime endDate)
+        private dataTableResult<DispatchData> monthSumView(DateTime beginDate, DateTime endDate)
         {
-            IEnumerable<MonthlySumData> query;
+            IEnumerable<DispatchData> query;
             query = repServ.MonthlySumController(beginDate, endDate);
-            var result = GetDataTableResult<MonthlySumData>(query);
+            var result = GetDataTableResult<DispatchData>(query);
             return result;
         }
 
@@ -745,11 +745,11 @@ namespace Machete.Web.Controllers
             return result;
         }
         #endregion
-        private dataTableResult<NewWorkerData> NewWorkerView(DateTime beginDate, DateTime endDate, string reportType)
+        private dataTableResult<WorkerData> NewWorkerView(DateTime beginDate, DateTime endDate, string reportType)
         {
-            IEnumerable<NewWorkerData> query;
+            IEnumerable<WorkerData> query;
             query = repServ.NewWorkerController(beginDate, endDate, reportType);
-            var result = GetDataTableResult<NewWorkerData>(query);
+            var result = GetDataTableResult<WorkerData>(query);
             return result;
         }
 
