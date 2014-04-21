@@ -964,12 +964,12 @@ namespace Machete.Service
             return q;
         }
 
-        public IEnumerable<DispatchData> MonthlySumController(DateTime beginDate, DateTime endDate)
+        public IEnumerable<DispatchData> DispatchReportController(DateTime beginDate, DateTime endDate)
         {
             IEnumerable<ReportUnit> signins;
             IEnumerable<ReportUnit> unique;
             IEnumerable<ReportUnit> classes;
-            IEnumerable<ReportUnit> completedUnassigned;
+            IEnumerable<ReportUnit> notAssigned;
             IEnumerable<ReportUnit> dispatched;
             IEnumerable<ReportUnit> tempDisp;
             IEnumerable<ReportUnit> permDisp;
@@ -985,13 +985,14 @@ namespace Machete.Service
             signins = CountSignins().ToList();
             unique = CountUniqueSignins().ToList();
             classes = GetActivitySignins().ToList();
-            notAssigned = Count(LOrderStatus.Completed).ToList();
+            notAssigned = CountNotAssigned(LOrderStatus.Completed).ToList();
             dispatched = CountAssignments().ToList();
             tempDisp = CountAssignments(false).ToList();
             permDisp = CountAssignments(true).ToList();
             undupDisp = CountAssignments(dateRange).ToList();
             average = HourlyWageAverage().ToList();
-            cancelled = CountUnassigned(LOrderStatus.Cancelled).ToList();
+            cancelled = CountNotAssigned(LOrderStatus.Cancelled).ToList();
+            skills = ListJobs().ToList();
 
             q = dateRange
                 .Select(g => new DispatchData
@@ -1000,8 +1001,6 @@ namespace Machete.Service
                     dateEnd = g.AddDays(1),
                     totalSignins = (int)signins.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
                     uniqueSignins = (int)unique.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
-                    //completedUnassignedAssignments = assignments.Where(w => DbFunctions.TruncateTime(w.workOrder.dateTimeofWork) == g).Count()
-                    ,
                     dispatched = (int)dispatched.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
                     tempDispatched = (int)tempDisp.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
                     permanentPlacements = (int)permDisp.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(), //dd
@@ -1009,8 +1008,9 @@ namespace Machete.Service
                     totalHours = average.Where(w => w.date == g).Select(h => h.hours).FirstOrDefault(),
                     totalIncome = average.Where(w => w.date == g).Select(h => h.wages).FirstOrDefault(),
                     avgIncomePerHour = average.Where(w => w.date == g).Select(h => h.avg).FirstOrDefault(),
-                    //cancelledAssignments = (int)cancelled.Where(w => w.date == g).Select(h => h.count).FirstOrDefault()
-                    ,
+                    countNotAssigned = (int)notAssigned.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
+                    cancelledAssignments = (int)cancelled.Where(w => w.date == g).Select(h => h.count).FirstOrDefault(),
+                    skills = skills.Where(w => w.date == g)
                     
                 });
 
@@ -1252,6 +1252,7 @@ namespace Machete.Service
         public int totalHours { get; set; }
         public double totalIncome { get; set; }
         public double avgIncomePerHour { get; set; }
+        public IEnumerable<ReportUnit> skills { get; set; }
     }
 
     public class ZipModel
