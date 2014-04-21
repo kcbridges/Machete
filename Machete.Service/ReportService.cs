@@ -449,19 +449,19 @@ namespace Machete.Service
             var asQ = asRepo.GetAllQ();
 
             return range.GroupJoin(asQ
-    			    .Where(signin => signin.person != null)
-	    		    .GroupBy(g => g.personID)
-		    	    .Select(sel => new {
-			    	    personId = sel.Key,
-				        fsi = sel.Min(x => x.dateforsignin)
-			        }),
-		        x => x,
-		        asi => DbFunctions.TruncateTime(asi.fsi),
-		        (x, asi) => new ReportUnit
-		        {
-			        date = x,
-			        count = asi.Count()
-		        })
+                .Where(w => w.Activity.dateStart >= range.First())
+                .GroupBy(g => g.personID)
+                .Select(h => new { waID = h.Key, fwa = h.Min(x => x.Activity.dateStart) }),
+                x => x,
+                wa => DbFunctions.TruncateTime(wa.fwa),//.Date,
+                (x, wa) => new ReportUnit
+                {
+                    date = x,
+                    count = wa
+                        .GroupBy(g => g.waID)
+                        .Select(z => z.Key)
+                        .Count()
+                })
                 .AsQueryable();
         }
 
@@ -477,20 +477,19 @@ namespace Machete.Service
             var asQ = asRepo.GetAllQ();
 
             return range.GroupJoin(asQ
-                    .Where(signin => signin.person != null
-                        && signin.Activity.name == actNameId)
+                    .Where(w => w.Activity.dateStart >= new DateTime(2014, 3, 1)
+                        && w.Activity.name == actNameId)
                     .GroupBy(g => g.personID)
-                    .Select(sel => new
-                    {
-                        personId = sel.Key,
-                        fsi = sel.Min(x => x.dateforsignin)
-                    }),
+                    .Select(h => new { waID = h.Key, fwa = h.Min(x => x.Activity.dateStart) }),
                 x => x,
-                asi => DbFunctions.TruncateTime(asi.fsi),
-                (x, asi) => new ReportUnit
+                wa => DbFunctions.TruncateTime(wa.fwa),
+                (x, wa) => new ReportUnit
                 {
                     date = x,
-                    count = asi.Count()
+                    count = wa
+                        .GroupBy(g => g.waID)
+                        .Select(z => z.Key)
+                        .Count()
                 })
                 .AsQueryable();
         }
