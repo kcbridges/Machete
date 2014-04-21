@@ -142,10 +142,8 @@ namespace Machete.Service
         }
 
         /// <summary>
-        /// Counts work assignments by date.
+        /// Counts work assignments by date (assigned orders only).
         /// </summary>
-        /// <param name="beginDate"></param>
-        /// <param name="endDate"></param>
         /// <returns></returns>
         public IQueryable<ReportUnit> CountAssignments()
         {
@@ -220,6 +218,27 @@ namespace Machete.Service
                 .AsQueryable();
         }
 
+
+        /// <summary>
+        /// Counts ***unassigned*** work assignments by date where the order status matches the given key.
+        /// </summary>
+        /// <param name="orderStatus">The string to use as key</param>
+        /// <returns></returns>
+        public IQueryable<ReportUnit> CountNotAssigned(string orderStatus)
+        {
+            var waQ = waRepo.GetAllQ();
+
+            return waQ
+                .Where(y => y.workerAssignedID == null
+                    && y.workOrder.status == lCache.getByKeys(LCategory.orderstatus, orderStatus))
+                .GroupBy(gb => DbFunctions.TruncateTime(gb.workOrder.dateTimeofWork))
+                .Select(g => new ReportUnit
+                {
+                    date = g.Key,
+                    count = g.Count(),
+                    info = ""
+                });
+        }
 
         /// <summary>
         /// CountCancelled()
@@ -520,7 +539,7 @@ namespace Machete.Service
 
         /// <summary>
         /// Returns dates of completion, minutes completed, and the dwccardnum for
-        /// all adults attending >x minutes of a particular class for a given time range.
+        /// all adults attending >x minutes of an array of activityName IDs for a given time range.
         /// </summary>
         /// <param name="actNameId">The Lookups ID of the activityName to filter by.</param>
         /// <param name="minutesInClass">The amount of time, in minutes, those to be counted must have attended classes of the given activityName type.</param>
@@ -528,8 +547,9 @@ namespace Machete.Service
         public IQueryable<ReportUnit> GetActivityRockstars(IEnumerable<DateTime> range, int[] actNameId, int minutesInClass)
         {
             var asQ = asRepo.GetAllQ();
-            string[] naQ = lookRepo.GetManyQ(z => actNameId.Contains(z.ID)).Select(na => na.text_EN).ToArray();
+            string[] naQ = lookRepo.GetManyQ(z => actNameId.Contains(z.ID)).Select(na => na.text_EN + ", ").ToArray();
             string sb = new StringBuilder().Append(naQ).ToString(); // should show all actNames being queried
+            sb.TrimEnd(sb[sb.Length - 2]);
 
             return range
             .GroupJoin(asQ
