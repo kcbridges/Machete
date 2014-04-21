@@ -1019,37 +1019,24 @@ namespace Machete.Service
 
         public IEnumerable<ActivityData> ActivityReportController(DateTime beginDate, DateTime endDate)
         {
-            IEnumerable<ActivityUnit> getAllClassAttendance;
+            IEnumerable<ReportUnit> name;
+            IEnumerable<ReportUnit> attendance;
+            IEnumerable<ReportUnit> morethanxhours;
             IEnumerable<ActivityData> q;
             IEnumerable<DateTime> getDates;
 
-            getDates = Enumerable.Range(0, 1 + endDate.Subtract(beginDate).Days)
-                .Select(offset => beginDate.AddDays(offset))
-                .ToArray();
+            var dateRange = GetDateRange(beginDate, endDate);
 
-            getAllClassAttendance = GetActivitySignins(beginDate, endDate).ToList();
-            eslAssessed = GetActivityRockstars().ToList();
-            var safetyTrainees = getAllClassAttendance
-                        .Where(whr => whr.activityType == "Health & Safety");
-            var skillsTrainees = getAllClassAttendance
-                        .Where(whr => whr.activityType == "Skills Training" || whr.activityType == "Leadership Development");
-            var basGardenTrainees = getAllClassAttendance.Where(basic => basic.info == "Basic Gardening");
-            var advGardenTrainees = getAllClassAttendance.Where(adv => adv.info == "Advanced Gardening");
-            var finTrainees = getAllClassAttendance.Where(fin => fin.info == "Financial Education");
-            var oshaTrainees = getAllClassAttendance.Where(osha => osha.info.Contains("OSHA"));
+            name = GetActivitySignins().ToList();
+            attendance = GetActivitySignins().ToList();
 
             q = getDates
                 .Select(g => new ActivityData
                 {
-                    dateStart = g,
-                    safety = safetyTrainees.Where(whr => whr.date == g).Count(),
-                    skills = skillsTrainees.Where(whr => whr.date == g).Count(),
-                    esl = eslAssessed.Where(whr => whr.date == g).Count(),
-                    basGarden = basGardenTrainees.Where(whr => whr.date == g).Count(),
-                    advGarden = advGardenTrainees.Where(whr => whr.date == g).Count(),
-                    finEd = finTrainees.Where(whr => whr.date == g).Count(),
-                    osha = oshaTrainees.Where(whr => whr.date == g).Count(),
-                    drilldown = getAllClassAttendance.Where(whr => whr.date == g)
+                    ActivityName = name.Where(w => w.date == g).ToString(),
+                    Attendance = (int)attendance.Where(w => w.date == g).Select(FirstOrDefault(),
+                    MoreThanXHours = (int)morethanxhours.Where(w => w.date == g).FirstOrDefault(),
+                    
                 });
 
             return q;
@@ -1279,16 +1266,10 @@ namespace Machete.Service
     
     public class ActivityData
     {
-        public DateTime? dateStart { get; set; }
-        public DateTime? dateEnd { get; set; }
-        public int safety { get; set; }
-        public int skills { get; set; }
-        public int esl { get; set; }
-        public int basGarden { get; set; }
-        public int advGarden { get; set; }
-        public int finEd { get; set; }
-        public int osha { get; set; }
-        public IEnumerable<ActivityUnit> drilldown { get; set; }
+        public string ActivityName { get; set; }
+        public int Attendance { get; set; }
+        public int MoreThanXHours { get; set; }
+        
     }
 
     #endregion
