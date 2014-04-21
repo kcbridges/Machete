@@ -1019,7 +1019,6 @@ namespace Machete.Service
 
         public IEnumerable<ActivityData> ActivityReportController(DateTime beginDate, DateTime endDate)
         {
-            IEnumerable<ReportUnit> eslAssessed;
             IEnumerable<ActivityUnit> getAllClassAttendance;
             IEnumerable<ActivityData> q;
             IEnumerable<DateTime> getDates;
