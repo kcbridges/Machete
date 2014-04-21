@@ -658,23 +658,17 @@ namespace Machete.Service
             return query;
         }
 
-        public IQueryable<ReportUnit> ClientProfileHomeless(DateTime beginDate, DateTime endDate)
+        public IQueryable<ReportUnit> ClientProfileHomeless(IEnumerable<DateTime> range)
         {
-            IQueryable<ReportUnit> query;
-
-
             var wQ = wRepo.GetAllQ();
 
-            query = wQ
-                .Where(whr => whr.memberexpirationdate > beginDate && whr.dateOfMembership < endDate)
-                .GroupBy(grp => grp.homeless)
-                .Select(group => new ReportUnit
+            return range
+                .Select(x => new ReportUnit
                 {
-                    info = group.Key == null ? "Unknown" : group.Key.ToString(),
-                    count = group.Count()
-                });
-
-            return query;
+                    date = x,
+                    count = wQ.Where(w => w.memberexpirationdate > x && w.dateOfMembership <= x && w.homeless == true).Count()
+                })
+                .AsQueryable();
         }
 
         public IQueryable<ReportUnit> ClientProfileHouseholdComposition(DateTime beginDate, DateTime endDate)
@@ -1022,19 +1016,19 @@ namespace Machete.Service
             IEnumerable<ReportUnit> attendance;
             IEnumerable<ReportUnit> morethanxhours;
             IEnumerable<ActivityData> q;
-            IEnumerable<DateTime> getDates;
 
             var dateRange = GetDateRange(beginDate, endDate);
 
             name = GetActivitySignins().ToList();
             attendance = GetActivitySignins().ToList();
+            morethanxhours = GetActivitySignins().ToList();
 
-            q = getDates
+            q = dateRange
                 .Select(g => new ActivityData
                 {
                     ActivityName = name.Where(w => w.date == g).ToString(),
-                    Attendance = (int)attendance.Where(w => w.date == g).Select(FirstOrDefault(),
-                    MoreThanXHours = (int)morethanxhours.Where(w => w.date == g).FirstOrDefault(),
+                    Attendance = (int)attendance.Where(w => w.date == g).Select(a => a.count).FirstOrDefault(),
+                    MoreThanXHours = (int)morethanxhours.Where(w => w.date == g).Select(a => a.count).FirstOrDefault(),
                     
                 });
 
@@ -1048,16 +1042,43 @@ namespace Machete.Service
         /// <param name="beginDate"></param>
         /// <param name="endDate"></param>
         /// <returns>date, singleAdults, familyHouseholds, newSingleAdults, newFamilyHouseholds, zipCodeCompleteness</returns>
-        public IEnumerable<WorkerData> NewWorkerController(DateTime beginDate, DateTime endDate, string reportType)
+        public IEnumerable<WorkerData> WorkerReportController(DateTime beginDate, DateTime endDate, string reportType)
         {
             IEnumerable<WorkerData> q;
             IEnumerable<MemberDateModel> singleAdults;
             IEnumerable<MemberDateModel> familyHouseholds;
-            IEnumerable<DateTime> getDates;
-            IEnumerable<StatusUnit> status;
+            IEnumerable<ReportUnit> status;
+            IEnumerable<ReportUnit> livesAlone;
+            IEnumerable<ReportUnit> enrolled;
+            IEnumerable<ReportUnit> exited;
+            IEnumerable<ReportUnit> immigrantRefugee;
+            IEnumerable<ReportUnit> homeless;
+            IEnumerable<ReportUnit> skillsbreakdown;
+            IEnumerable<ReportUnit> englishLevel;
+            IEnumerable<ReportUnit> disabled;
+            IEnumerable<ReportUnit> license;
+            IEnumerable<ReportUnit> insurance;
+            IEnumerable<ReportUnit> age;
+            IEnumerable<ReportUnit> incomeLevel;
+
+            var dateRange = GetDateRange(beginDate, endDate);
 
             singleAdults = SingleAdults().ToList();
             familyHouseholds = FamilyHouseholds().ToList();
+            status = MemberStatusByDate(dateRange).ToList();
+            livesAlone = 
+            enrolled =
+            exited =
+            immigrantRefugee =
+            homeless = ClientProfileHomeless(dateRange).ToList();
+            skillsbreakdown =
+            englishLevel =
+            disabled =
+            license = 
+            insurance = 
+            age =
+            incomeLevel = 
+
 
             if (reportType == "weekly" || reportType == "monthly")
             {
