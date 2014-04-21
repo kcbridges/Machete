@@ -142,10 +142,8 @@ namespace Machete.Service
         }
 
         /// <summary>
-        /// Counts work assignments by date.
+        /// Counts work assignments by date (assigned orders only).
         /// </summary>
-        /// <param name="beginDate"></param>
-        /// <param name="endDate"></param>
         /// <returns></returns>
         public IQueryable<ReportUnit> CountAssignments()
         {
@@ -220,6 +218,27 @@ namespace Machete.Service
                 .AsQueryable();
         }
 
+
+        /// <summary>
+        /// Counts ***unassigned*** work assignments by date where the order status matches the given key.
+        /// </summary>
+        /// <param name="orderStatus">The string to use as key</param>
+        /// <returns></returns>
+        public IQueryable<ReportUnit> CountNotAssigned(string orderStatus)
+        {
+            var waQ = waRepo.GetAllQ();
+
+            return waQ
+                .Where(y => y.workerAssignedID == null
+                    && y.workOrder.status == lCache.getByKeys(LCategory.orderstatus, orderStatus))
+                .GroupBy(gb => DbFunctions.TruncateTime(gb.workOrder.dateTimeofWork))
+                .Select(g => new ReportUnit
+                {
+                    date = g.Key,
+                    count = g.Count(),
+                    info = ""
+                });
+        }
 
         /// <summary>
         /// CountCancelled()
