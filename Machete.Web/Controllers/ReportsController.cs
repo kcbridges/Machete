@@ -584,7 +584,7 @@ namespace Machete.Web.Controllers
             beginDate = wDate.AddDays(-6).Date;
             endDate = new DateTime(wDate.Year, wDate.Month, wDate.Day, 23, 59, 59);
 
-            dataTableResult<ZipModel> newEmp = EmployerReportView(beginDate, endDate);
+            dataTableResult<EmployerModel> newEmp = EmployerReportView(beginDate, endDate);
 
             var result = from d in newEmp.query
                          select new
@@ -621,7 +621,7 @@ namespace Machete.Web.Controllers
             beginDate = new DateTime(mDate.Year, mDate.Month, 1, 0, 0, 0);
             endDate = new DateTime(mDate.Year, mDate.Month, System.DateTime.DaysInMonth(mDate.Year, mDate.Month));
 
-            dataTableResult<ZipModel> newEmp = EmployerReportView(beginDate, endDate);
+            dataTableResult<EmployerModel> newEmp = EmployerReportView(beginDate, endDate);
 
             var result = from d in newEmp.query
                          select new
@@ -658,7 +658,7 @@ namespace Machete.Web.Controllers
             beginDate = yDate.AddMonths(-12).Date;
             endDate = new DateTime(yDate.Year, yDate.Month, yDate.Day, 23, 59, 59);
 
-            dataTableResult<ZipModel> newEmp = EmployerReportView(beginDate, endDate);
+            dataTableResult<EmployerModel> newEmp = EmployerReportView(beginDate, endDate);
 
             var result = from d in newEmp.query
                          select new
@@ -748,16 +748,16 @@ namespace Machete.Web.Controllers
         private dataTableResult<WorkerData> NewWorkerView(DateTime beginDate, DateTime endDate, string reportType)
         {
             IEnumerable<WorkerData> query;
-            query = repServ.NewWorkerController(beginDate, endDate, reportType);
+            query = repServ.WorkerReportController(beginDate, endDate, reportType);
             var result = GetDataTableResult<WorkerData>(query);
             return result;
         }
 
-        private dataTableResult<ZipModel> EmployerReportView(DateTime beginDate, DateTime endDate)
+        private dataTableResult<EmployerModel> EmployerReportView(DateTime beginDate, DateTime endDate)
         {
-            IEnumerable<ZipModel> query;
+            IEnumerable<EmployerModel> query;
             query = repServ.EmployerReportController(beginDate, endDate);
-            var result = GetDataTableResult<ZipModel>(query);
+            var result = GetDataTableResult<EmployerModel>(query);
             return result;
         }
         private dataTableResult<T> GetDataTableResult<T>(IEnumerable<T> query)

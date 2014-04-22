@@ -30,6 +30,6 @@ namespace Machete.Web.ViewModel
 
     public class JzcReportPrintView : ReportPrintView
     {
-        public dataTableResult<ZipModel> report { get; set; }
+        public dataTableResult<EmployerModel> report { get; set; }
     }
 }

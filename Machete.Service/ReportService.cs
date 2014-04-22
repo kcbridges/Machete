@@ -26,11 +26,9 @@ namespace Machete.Service
         DailySumData DailySumController(DateTime date);
         IEnumerable<WeeklySumData> WeeklySumController(DateTime beginDate, DateTime endDate);
         IEnumerable<DispatchData> MonthlySumController(DateTime beginDate, DateTime endDate);
-        IEnumerable<YearSumData> YearlySumController(DateTime beginDate, DateTime endDate);
         IEnumerable<ActivityData> ActivityReportController(DateTime beginDate, DateTime endDate, string reportType);
-        IEnumerable<ActivityData> YearlyActController(DateTime beginDate, DateTime endDate);
-        IEnumerable<ZipModel> EmployerReportController(DateTime beginDate, DateTime endDate);
-        IEnumerable<WorkerData> NewWorkerController(DateTime beginDate, DateTime endDate, string reportType);
+        IEnumerable<EmployerModel> EmployerReportController(DateTime beginDate, DateTime endDate);
+        IEnumerable<WorkerData> WorkerReportController(DateTime beginDate, DateTime endDate, string reportType);
     }
 
     public class ReportService : IReportService
@@ -1048,7 +1046,8 @@ namespace Machete.Service
             IEnumerable<MemberDateModel> singleAdults;
             IEnumerable<MemberDateModel> familyHouseholds;
             IEnumerable<ReportUnit> status;
-            IEnumerable<ReportUnit> livesAlone;
+            IEnumerable<MemberDateModel> livesAlone;
+            IEnumerable<MemberDateModel> maritalStatus;
             IEnumerable<ReportUnit> enrolled;
             IEnumerable<ReportUnit> exited;
             IEnumerable<ReportUnit> immigrantRefugee;
@@ -1060,68 +1059,76 @@ namespace Machete.Service
             IEnumerable<ReportUnit> insurance;
             IEnumerable<ReportUnit> age;
             IEnumerable<ReportUnit> incomeLevel;
+            IEnumerable<ReportUnit> gender;
 
             var dateRange = GetDateRange(beginDate, endDate);
 
+            //TODO: fix the methods that are red here, and also add new methods where they don't exist
             singleAdults = SingleAdults().ToList();
             familyHouseholds = FamilyHouseholds().ToList();
             status = MemberStatusByDate(dateRange).ToList();
-            livesAlone = 
-            enrolled =
-            exited =
-            immigrantRefugee =
+            livesAlone = FamilyHouseholds().ToList();
+            enrolled = MemberStatusByDate(dateRange).ToList();
+            exited = MemberStatusByDate(dateRange).ToList();
+            immigrantRefugee = ClientProfileRefugeeImmigrant().ToList();
             homeless = ClientProfileHomeless(dateRange).ToList();
             skillsbreakdown =
-            englishLevel =
-            disabled =
-            license = 
-            insurance = 
-            age =
-            incomeLevel = 
+            englishLevel = ClientProfileEnglishLevel().ToList();
+            disabled = ClientProfileHasDisability().ToList();
+            license =
+            insurance =
+            age = ClientProfileWorkerAge().ToList();
+            race = ClientProfileRaceEthnicity().ToList();
+            incomeLevel = ClientProfileIncome().ToList()
+            maritalStatus = SingleAdults().ToList();
+            gender = ClientProfileGender().ToList();
 
+            //TODO: rewrite all of this 
+            //if (reportType == "weekly" || reportType == "monthly")
+            //{
+            //    getDates = Enumerable.Range(0, 1 + endDate.Subtract(beginDate).Days)
+            //       .Select(offset => endDate.AddDays(-offset))
+            //       .ToArray();
 
-            if (reportType == "weekly" || reportType == "monthly")
-            {
-                getDates = Enumerable.Range(0, 1 + endDate.Subtract(beginDate).Days)
-                   .Select(offset => endDate.AddDays(-offset))
-                   .ToArray();
+            //    q = getDates
+            //        .Select(x => new WorkerData
+            //        {
+            //            dateStart = x,
+            //            dateEnd = x.AddDays(1),
+            //            singleAdults = singleAdults.Where(y => y.expDate >= x && y.memDate < x.AddDays(1)).Count(),
+            //            familyHouseholds = familyHouseholds.Where(y => y.expDate >= x && y.memDate < x.AddDays(1)).Count(),
+            //            newSingleAdults = singleAdults.Where(y => y.memDate >= x && y.memDate < x.AddDays(1)).Count(),
+            //            newFamilyHouseholds = familyHouseholds.Where(y => y.memDate >= x && y.memDate < x.AddDays(1)).Count(),
+            //            zipCompleteness = singleAdults.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddDays(1)).Count()
+            //                            + familyHouseholds.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddDays(1)).Count()
+            //        });
+            //}
+            //else if (reportType == "yearly")
+            //{
+            //    getDates = Enumerable.Range(1, 4)
+            //        .Select(offset => endDate.AddMonths(-offset * 3))
+            //        .ToArray();
 
-                q = getDates
-                    .Select(x => new WorkerData
-                    {
-                        dateStart = x,
-                        dateEnd = x.AddDays(1),
-                        singleAdults = singleAdults.Where(y => y.expDate >= x && y.memDate < x.AddDays(1)).Count(),
-                        familyHouseholds = familyHouseholds.Where(y => y.expDate >= x && y.memDate < x.AddDays(1)).Count(),
-                        newSingleAdults = singleAdults.Where(y => y.memDate >= x && y.memDate < x.AddDays(1)).Count(),
-                        newFamilyHouseholds = familyHouseholds.Where(y => y.memDate >= x && y.memDate < x.AddDays(1)).Count(),
-                        zipCompleteness = singleAdults.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddDays(1)).Count()
-                                        + familyHouseholds.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddDays(1)).Count()
-                    });
-            }
-            else if (reportType == "yearly")
-            {
-                getDates = Enumerable.Range(1, 4)
-                    .Select(offset => endDate.AddMonths(-offset * 3))
-                    .ToArray();
+            //    q = getDates
+            //        .Select(x => new WorkerData
+            //        {
+            //            dateStart = x.AddDays(1),
+            //            dateEnd = x.AddMonths(3).AddDays(1),
+            //            singleAdults = singleAdults.Where(y => y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
+            //            familyHouseholds = familyHouseholds.Where(y => y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
+            //            newSingleAdults = singleAdults.Where(y => y.memDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
+            //            newFamilyHouseholds = familyHouseholds.Where(y => y.memDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
+            //            zipCompleteness = singleAdults.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count()
+            //                            + familyHouseholds.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count()
+            //        });
+            //}
+            //else throw new Exception("Report type must be \"weekly\", \"monthly\" or \"yearly\".");
 
-                q = getDates
-                    .Select(x => new WorkerData
-                    {
-                        dateStart = x.AddDays(1),
-                        dateEnd = x.AddMonths(3).AddDays(1),
-                        singleAdults = singleAdults.Where(y => y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-                        familyHouseholds = familyHouseholds.Where(y => y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-                        newSingleAdults = singleAdults.Where(y => y.memDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-                        newFamilyHouseholds = familyHouseholds.Where(y => y.memDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-                        zipCompleteness = singleAdults.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count()
-                                        + familyHouseholds.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count()
-                    });
-            }
-            else throw new Exception("Report type must be \"weekly\", \"monthly\" or \"yearly\".");
-
-            return q;
+            //return q;
         }
+
+
+
 
         /// <summary>
         /// Jobs and Zip Codes controller. The jobs and zip codes report was
@@ -1131,11 +1138,15 @@ namespace Machete.Service
         /// <param name="beginDate"></param>
         /// <param name="endDate"></param>
         /// <returns></returns>
-        public IEnumerable<ZipModel> EmployerReportController(DateTime beginDate, DateTime endDate)
+        public IEnumerable<EmployerModel> EmployerReportController(DateTime beginDate, DateTime endDate)
         {
-            IEnumerable<ZipModel> topZips;
-            topZips = ListOrdersByZip(beginDate, endDate).ToList();
-            return topZips;
+            IEnumerable<ReportUnit> topZips;
+
+            var dateRange = GetDateRange(beginDate, endDate);
+
+            topZips = ListOrdersByZip().ToList();
+
+            //return topZips;
         }
 
         #region helper methods
@@ -1261,7 +1272,7 @@ namespace Machete.Service
         public IEnumerable<ReportUnit> skills { get; set; }
     }
 
-    public class ZipModel
+    public class EmployerModel
     {
         public string zips { get; set; }
         public int jobs { get; set; }
