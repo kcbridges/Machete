@@ -809,35 +809,32 @@ namespace Machete.Service
             return query;
         }
 
-        public IQueryable<ReportUnit> ClientProfileRaceEthnicity(DateTime beginDate, DateTime endDate)
+        public IQueryable<RaceUnit> ClientProfileRaceEthnicity(IEnumerable<DateTime> range)
         {
-            IQueryable<ReportUnit> query;
+            IQueryable<RaceUnit> query;
 
 
             var wQ = wRepo.GetAllQ();
             var lQ = lookRepo.GetAllQ();
 
-            query = wQ
-                .Where(whr => whr.memberexpirationdate > beginDate && whr.dateOfMembership < endDate)
-                .GroupBy(worker => worker.RaceID)
-                .Join(lQ,
-                    gJoin => gJoin.Key,
-                    lJoin => lJoin.ID,
-                    (gJoin, lJoin) => new
-                    {
-                        race = lJoin.text_EN,
-                        count = gJoin.Count()
-                    })
-                .Select(glJoin => new ReportUnit
-                {
-                    info = glJoin.race,
-                    count = glJoin.count
-                });
+
+            return range
+                .Select(x => new RaceUnit
+                   {
+                       date = x,
+                       afroamerican = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Afroamerican").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count(),
+                       asian = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Asian").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count(),
+                       caucasian = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Caucasian").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count(),
+                       hawaiian = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Hawaiian").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count(),
+                       latino = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Latino").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count(),
+                       nativeamerican = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Native American").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count(),
+                       other = wQ.Where(wo => wo.RaceID == lQ.Single(w => w.category == "race" && w.text_EN == "Other").ID && wo.memberexpirationdate > x && wo.dateOfMembership <= x).Count()
+                   }).AsQueryable();
 
             return query;
         }
 
-        public IQueryable<ReportUnit> ClientProfileRefugeeImmigrant(DateTime beginDate, DateTime endDate)
+        public IQueryable<ReportUnit> ClientProfileRefugeeImmigrant(IEnumerable<DateTime> range)
         {
             IQueryable<ReportUnit> query;
 
@@ -845,14 +842,12 @@ namespace Machete.Service
             var wQ = wRepo.GetAllQ();
             var lQ = lookRepo.GetAllQ();
 
-            query = wQ
-                .Where(whr => whr.memberexpirationdate > beginDate && whr.dateOfMembership < endDate)
-                .GroupBy(worker => worker.immigrantrefugee)
-                .Select(group => new ReportUnit
-                {
-                    info = group.Key ? "Yes" : "No",
-                    count = group.Count()
-                });
+            return range
+                .Select(x => new ReportUnit
+           {
+               date = x,
+               count = wQ.Where(w => w.memberexpirationdate.Date > x && w.dateOfMembership.Date <= x && w.immigrantrefugee == true).Count(),
+           }).AsQueryable();
 
             return query;
         }
@@ -1043,47 +1038,46 @@ namespace Machete.Service
         public IEnumerable<WorkerData> WorkerReportController(DateTime beginDate, DateTime endDate, string reportType)
         {
             IEnumerable<WorkerData> q;
-            IEnumerable<MemberDateModel> singleAdults;
-            IEnumerable<MemberDateModel> familyHouseholds;
+            //IEnumerable<MemberDateModel> singleAdults;
+            //IEnumerable<MemberDateModel> familyHouseholds;
             IEnumerable<ReportUnit> status;
-            IEnumerable<MemberDateModel> livesAlone;
-            IEnumerable<MemberDateModel> maritalStatus;
+            //IEnumerable<MemberDateModel> livesAlone;
+            //IEnumerable<MemberDateModel> maritalStatus;
             IEnumerable<ReportUnit> enrolled;
             IEnumerable<ReportUnit> exited;
-            IEnumerable<ReportUnit> immigrantRefugee;
-            IEnumerable<ReportUnit> homeless;
-            IEnumerable<ReportUnit> skillsbreakdown;
-            IEnumerable<ReportUnit> englishLevel;
-            IEnumerable<ReportUnit> disabled;
-            IEnumerable<ReportUnit> license;
-            IEnumerable<ReportUnit> insurance;
-            IEnumerable<ReportUnit> age;
-            IEnumerable<ReportUnit> incomeLevel;
-            IEnumerable<ReportUnit> gender;
+            //IEnumerable<ReportUnit> immigrantRefugee;
+            //IEnumerable<ReportUnit> homeless;
+            //IEnumerable<ReportUnit> skillsbreakdown;
+            //IEnumerable<ReportUnit> englishLevel;
+            //IEnumerable<ReportUnit> disabled;
+            //IEnumerable<ReportUnit> license;
+            //IEnumerable<ReportUnit> insurance;
+            //IEnumerable<ReportUnit> age;
+            //IEnumerable<ReportUnit> incomeLevel;
+            //IEnumerable<ReportUnit> gender;
 
             var dateRange = GetDateRange(beginDate, endDate);
 
             //TODO: fix the methods that are red here, and also add new methods where they don't exist
-            singleAdults = SingleAdults().ToList();
-            familyHouseholds = FamilyHouseholds().ToList();
+            //singleAdults = SingleAdults().ToList();
+            //familyHouseholds = FamilyHouseholds().ToList();
             status = MemberStatusByDate(dateRange).ToList();
-            livesAlone = FamilyHouseholds().ToList();
+            //livesAlone = FamilyHouseholds().ToList();
             enrolled = MemberStatusByDate(dateRange).ToList();
             exited = MemberStatusByDate(dateRange).ToList();
-            immigrantRefugee = ClientProfileRefugeeImmigrant().ToList();
-            homeless = ClientProfileHomeless(dateRange).ToList();
-            skillsbreakdown =
-            englishLevel = ClientProfileEnglishLevel().ToList();
-            disabled = ClientProfileHasDisability().ToList();
-            license =
-            insurance =
-            age = ClientProfileWorkerAge().ToList();
-            race = ClientProfileRaceEthnicity().ToList();
-            incomeLevel = ClientProfileIncome().ToList()
-            maritalStatus = SingleAdults().ToList();
-            gender = ClientProfileGender().ToList();
+            //immigrantRefugee = ClientProfileRefugeeImmigrant(dateRange).ToList();
+            //homeless = ClientProfileHomeless(dateRange).ToList();
+            //skillsbreakdown =
+            //englishLevel = ClientProfileEnglishLevel().ToList();
+            //disabled = ClientProfileHasDisability().ToList();
+            //license =
+            //insurance =
+            //age = ClientProfileWorkerAge().ToList();
+            //race = ClientProfileRaceEthnicity().ToList();
+            //incomeLevel = ClientProfileIncome().ToList()
+            //gender = ClientProfileGender().ToList();
 
-            //TODO: rewrite all of this 
+            ////TODO: rewrite all of this 
             //if (reportType == "weekly" || reportType == "monthly")
             //{
             //    getDates = Enumerable.Range(0, 1 + endDate.Subtract(beginDate).Days)
@@ -1109,22 +1103,17 @@ namespace Machete.Service
             //        .Select(offset => endDate.AddMonths(-offset * 3))
             //        .ToArray();
 
-            //    q = getDates
-            //        .Select(x => new WorkerData
-            //        {
-            //            dateStart = x.AddDays(1),
-            //            dateEnd = x.AddMonths(3).AddDays(1),
-            //            singleAdults = singleAdults.Where(y => y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-            //            familyHouseholds = familyHouseholds.Where(y => y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-            //            newSingleAdults = singleAdults.Where(y => y.memDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-            //            newFamilyHouseholds = familyHouseholds.Where(y => y.memDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count(),
-            //            zipCompleteness = singleAdults.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count()
-            //                            + familyHouseholds.Where(y => y.zip != null && y.expDate >= x && y.memDate < x.AddMonths(3).AddDays(1)).Count()
-            //        });
+                q = dateRange
+                    .Select(x => new WorkerData
+                    {
+                        date = x,
+                        count = status.Where(w => w.date == x).Select()
+                        
+                    });
             //}
             //else throw new Exception("Report type must be \"weekly\", \"monthly\" or \"yearly\".");
 
-            //return q;
+            return q;
         }
 
 
@@ -1208,9 +1197,15 @@ namespace Machete.Service
         public string zip { get; set; }
     }
 
-    public class ActivityUnit : ReportUnit
+    public class RaceUnit : ReportUnit
     {
-        public string activityType { get; set; }
+        public int afroamerican { get; set; }
+        public int asian { get; set; }
+        public int caucasian { get; set; }
+        public int hawaiian { get; set; }
+        public int latino { get; set; }
+        public int nativeamerican { get; set; }
+        public int other { get; set; }
     }
 
     /// <summary>
@@ -1280,7 +1275,7 @@ namespace Machete.Service
         public IEnumerable<ReportUnit> skills { get; set; }
     }
 
-    public class WorkerData
+    public class WorkerData : ReportUnit
     {
         public DateTime? dateStart { get; set; }
         public DateTime? dateEnd { get; set; }
